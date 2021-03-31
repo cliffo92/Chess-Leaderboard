@@ -1,0 +1,293 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jan 26 18:06:04 2021
+
+Chess Wednesday!
+
+@author: Brady Clifford
+"""
+
+import random
+import csv
+from operator import itemgetter
+
+
+MENU = ''' 
+[1] We Finished a Game
+[2] Random matchup
+[3] Add Player
+[4] Delete Player
+[5] Someone arrived/left
+[6] We're done for the night
+[7] Change player's name
+[8] Change player's score
+
+Choice: '''
+valid_need_file = ["y","yes","n","no"]
+wtl_options = ["w","t","l"]
+
+def open_file():
+    while True:
+        file = input("Whats the csv filename? ")
+        if file == "":
+            fp = open("leaderboard.csv")
+            return("leaderboard.csv",fp)
+        try:
+            fp = open(file)
+            return(file,fp)
+        except FileNotFoundError:
+            print("Error. Try again.")
+            
+def make_leaderboard(fp):
+    leaderboard = []
+    read = csv.reader(fp)
+    #next(read,None)
+    for line in read:
+        tup = (line[0],int(line[1]),"",line[3])
+        leaderboard.append(tup)
+    leaderboard =sorted(leaderboard,key=itemgetter(1),reverse=True)
+    return leaderboard
+    
+def new_game (leaderboard):
+    flag1 = True
+    flag2 = True
+    flag3 = True
+    while flag1:
+        p1 = input("Player 1:  ")
+        for tup in leaderboard:
+            if p1.lower() == tup[0].lower():
+                score1 = int(tup[1])
+                wtl1 = tup[3].split("-")
+                flag1 = False
+    while flag2:
+        p2 = input("Player 2:  ")
+        for tup in leaderboard:
+            if p2.lower() == tup[0].lower():
+                score2 = int(tup[1])
+                wtl2 = tup[3].split("-")
+                flag2 = False
+    while flag3:
+        wtl = input("If player 1 won hit w, hit t if tie and l if (s)he lost  ")
+        if wtl.lower() in wtl_options:
+            flag3 = False
+        else:
+            print("Invalid option!")
+            print()
+            
+    leaderboard = update(leaderboard,p1,p2,score1,score2,wtl,wtl1,wtl2)
+    
+    return leaderboard
+
+def random_matchup(leaderboard):
+    listoftuples = []
+    playing = input("Who's all playing rn? (place a comma between players)")
+    print()
+    print()
+    print()
+    playing = playing.split(",")
+    for person in playing:
+        person = person.strip()
+    for player in playing:
+        for tup in leaderboard:
+            if player.lower() == tup[0].lower():
+                listoftuples.append(tup)
+                leaderboard.remove(tup)
+    tup1 = random.choice(leaderboard)
+    leaderboard.remove(tup1)
+    tup2 = random.choice(leaderboard)
+    print(tup1[0]," and ",tup2[0]," have been chosen to play!")
+    prob1 = probability(tup1[1], tup2[1])
+    print(tup1[0]," has a ",prob1," change of winning and ",tup2[0]," has a ",(1 - prob1)," chance of winning")
+    input("")
+    leaderboard.append(tup1)
+    for tup in listoftuples:
+        leaderboard.append(tup)
+
+def add_player (leaderboard):
+    flag = 1
+    while True:
+        new = input("Player name:  ")
+        for tup in leaderboard:
+            if tup[0].lower() == new.lower():
+                print("Name already taken!!!")
+                print()
+                flag -= 1
+        if flag == 1:
+            break
+    leaderboard.append((new,500,"*","0-0-0"))
+    return leaderboard
+
+def delete (leaderboard):
+    delete = input("Who do you want to delete???  ")
+    sure = input("ARE YOU SURE??? (y/n)")
+    if sure.lower() == "y" or sure.lower()== "yes":
+        for tup in leaderboard:
+            if tup[0].lower() == delete.lower():
+                leaderboard.remove(tup)
+    return leaderboard
+
+def changename (leaderboard):
+    player = input("Who's name are we changing??  ")
+    name = input("What's their new name??  ")
+    for tup in leaderboard:
+        if tup[0].lower() == player.lower():
+            new_tup = (name,tup[1],tup[2],tup[3])
+            leaderboard.remove(tup)
+            leaderboard.append(new_tup)
+    return leaderboard
+
+def changescore (leaderboard):
+    player = input("Who's score are we changing??  ")
+    score = input("What's their new score??  ")
+    for tup in leaderboard:
+        if tup[0].lower() == player.lower():
+            new_tup = (tup[0],int(score),tup[2],tup[3])
+            leaderboard.remove(tup)
+            leaderboard.append(new_tup)
+    return leaderboard
+
+def probability(score1, score2):
+    return (1/(1+ 10**((score2-score1)/200)))
+
+def update (leaderboard,p1,p2,score1,score2,wtl,rec1,rec2):
+        
+    if wtl.lower() == "w":
+        floaty_boi = 1
+        newrec1 = [str(int(rec1[0])+1),rec1[1],rec1[2]]
+        newrec2 = [rec2[0],str(int(rec2[1])+1),rec2[2]]
+        print(p1," destroyed ",p2," !!!")
+        
+    elif wtl.lower() == "t":
+        floaty_boi = 0.5
+        newrec1 = [rec1[0],rec1[1],str(int(rec1[2])+1)]
+        newrec2 = [rec2[0],rec2[1],str(int(rec2[2])+1)]
+        print("Looks like ",p1," and ",p2," are pretty equal competitors...")
+    elif wtl.lower() == "l":
+        floaty_boi = 0
+        newrec1 = [rec1[0],str(int(rec1[1])+1),rec1[2]]
+        newrec2 = [str(int(rec2[0])+1),rec2[1],rec2[2]]
+        print(p2," destroyed ",p1," !!!")
+    newrec1S = newrec1[0]+"-"+newrec1[1]+"-"+newrec1[2]
+    newrec2S = newrec2[0]+"-"+newrec2[1]+"-"+newrec2[2]
+    prob1 = probability(score1,score2)
+    prob2 = 1 - prob1
+    change1 = 40*(floaty_boi - prob1)    
+    change2 = 40*((1-floaty_boi) - prob2)
+    flag1 = True
+    flag2 = True
+    for tup in leaderboard:
+        if tup[0].lower() == p1.lower():
+            if flag1:
+                newscore1 = round(change1) + int(tup[1])
+                new1 = (tup[0],newscore1,"*",newrec1S)
+                old1 = tup
+                leaderboard.append(new1)
+                flag1 = False
+                
+        elif tup[0].lower() == p2.lower():
+            if flag2:
+                newscore2 = round(change2) + int(tup[1])
+                new2 = (tup[0],newscore2,"*",newrec2S)
+                leaderboard.append(new2)
+                old2 = tup
+                flag2 = False
+                
+    leaderboard.remove(old1)
+    leaderboard.remove(old2)
+    return leaderboard
+
+def present (leaderboard):
+    while True:
+        left_arrive = input("Did someone arrive or leave? ")
+        if left_arrive.lower() == "arrive" or left_arrive.lower() == "leave":
+            break
+    if left_arrive.lower() == "arrive":
+        person = input("Who just got here? ")
+        for tup in leaderboard:
+            if person.lower() == tup[0].lower():
+                newtup = (tup[0],tup[1],"*",tup[3])
+                leaderboard.remove(tup)
+                leaderboard.append(newtup)
+    elif left_arrive.lower() == "leave":
+        person = input("Who just left? ")
+        for tup in leaderboard:
+            if person.lower() == tup[0].lower():
+                newtup = (tup[0],tup[1],"",tup[3])
+                leaderboard.remove(tup)
+                leaderboard.append(newtup)
+        
+
+def menu (leaderboard):
+    leaderboard = sorted(leaderboard,key=itemgetter(1), reverse = True)
+    print()
+    print()
+    print()
+    print("{:^35s}".format("Welcome To Chess Wednesday!!!"))
+    print()
+    print("{:<20s} {:15s}{:15s}".format("Player", "Score","Record"))
+    print("-"*45)
+    for tup in leaderboard:
+        if(tup[2]):
+            name = tup[0]+"*"
+        else:
+            name = tup[0]
+        print("{:<20s} {:<15d}{:15s}".format(name, tup[1],tup[3]))
+    option = input(MENU)
+    return option
+    
+    
+def main ():
+    start = True
+    while(start):
+        need_file = input("Do you have an excel file for the leaderboard??? (y/n)")
+        if need_file.lower() in valid_need_file:
+            start = False
+        else:
+            print("That wasn't an option... ")
+    
+    if (need_file.lower() == "y") or (need_file.lower() == "yes"):
+        file,fp = open_file()
+        leaderboard = make_leaderboard(fp)
+    elif (need_file.lower() == "n") or (need_file.lower() == "no"):
+        file = ""
+        leaderboard = []
+        
+    
+    while True:
+        present_leaderboard = []
+        option = menu(leaderboard)
+        if option == "1":
+            new_game(leaderboard)
+        elif option == "2": 
+            for tup in leaderboard:
+                if tup[2] == "*":
+                    present_leaderboard.append(tup)
+            random_matchup(present_leaderboard)
+        elif option == "3":
+            add_player(leaderboard)
+        elif option == "4":
+            delete(leaderboard)
+        elif option == "5":
+            present(leaderboard)
+        elif option == "6":
+            break
+        elif option == "7":
+            leaderboard = changename(leaderboard)
+        elif option == "8":
+            leaderboard = changescore(leaderboard)
+                    
+        
+        else:
+            input("Invalid option! Hit the enter button then give a valid option")
+    
+    if file == "":
+        file = input("Save leaderboard as... (don't put .csv, I'll add that)")
+        file = file+".csv"
+    with open(file,'w',newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        for tup in leaderboard:
+            writer.writerow([tup[0],tup[1],"",tup[3]])
+    print("Come again soon :p ")
+#DO NOT DELETE THE NEXT TWO LINES
+if __name__ == "__main__":
+    main()
